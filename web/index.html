@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery Roleplay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.4/dist/livekit-client.umd.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #14161a; --muted: #5f6672; --line: #e3e6eb;
+    --accent: #2f5bff; --accent-ink: #ffffff; --rep: #2f5bff; --rep-bg: #eaf0ff;
+    --agent-bg: #f1f2f4; --buyer: #b45309; --good: #15803d; --warn: #b45309; --bad: #b91c1c;
+    --chip-bg: #fff4e5; --chip-ink: #92400e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --panel: #171a20; --ink: #e8eaee; --muted: #9aa2ae; --line: #2a2f38;
+      --accent: #6b8cff; --accent-ink: #0b0d12; --rep: #8fa8ff; --rep-bg: #1d2640;
+      --agent-bg: #20242c; --buyer: #f0a64b; --good: #4ade80; --warn: #fbbf24; --bad: #f87171;
+      --chip-bg: #3a2a12; --chip-ink: #fcd9a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 Inter, system-ui, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--agent-bg); color: var(--muted); text-transform: capitalize; }
+  .pill.speaking { background: var(--rep-bg); color: var(--accent); }
+  main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px 20px; max-width: 1280px; margin: 0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 10px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.danger { color: var(--bad); }
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  .row button { flex: 1; }
+  .meter { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .meter .bar { flex: 1; height: 8px; border-radius: 4px; background: var(--agent-bg); overflow: hidden; }
+  .meter .fill { height: 100%; width: 0; background: var(--good); transition: width 60ms linear; }
+  .meter span { font-size: 12px; color: var(--muted); min-width: 64px; }
+  .steps { display: flex; gap: 4px; margin-top: 14px; }
+  .steps div { flex: 1; text-align: center; font-size: 11px; padding: 6px 2px; border-radius: 6px; background: var(--agent-bg); color: var(--muted); }
+  .steps div.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .steps div.done { color: var(--ink); }
+  .buyer-name { font-weight: 700; font-size: 16px; }
+  .buyer-sub { color: var(--muted); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { background: var(--chip-bg); color: var(--chip-ink); font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+  .empty { color: var(--muted); font-size: 14px; }
+  #transcript { display: flex; flex-direction: column; gap: 10px; min-height: 360px; max-height: calc(100vh - 140px); overflow-y: auto; padding-right: 4px; }
+  .msg { max-width: 78%; padding: 9px 12px; border-radius: 12px; background: var(--agent-bg); }
+  .msg .who { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 2px; }
+  .msg.rep { align-self: flex-end; background: var(--rep-bg); }
+  .msg.rep .who { color: var(--rep); }
+  .msg.buyer .who { color: var(--buyer); }
+  .msg.interim .text { color: var(--muted); }
+  .divider { align-self: center; font-size: 12px; color: var(--muted); padding: 2px 10px; border: 1px dashed var(--line); border-radius: 999px; }
+  .score-head { display: flex; align-items: baseline; gap: 12px; }
+  .score-big { font-size: 40px; font-weight: 700; line-height: 1; }
+  .cat { display: grid; grid-template-columns: 1fr 44px; gap: 4px 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .cat .name { font-weight: 600; font-size: 14px; }
+  .cat .val { text-align: right; font-weight: 700; }
+  .cat .detail { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+  .dots { grid-column: 1 / -1; display: flex; gap: 3px; }
+  .dots i { flex: 1; height: 5px; border-radius: 3px; background: var(--agent-bg); }
+  .dots i.f1, .dots i.f2 { background: var(--bad); } .dots i.f3 { background: var(--warn); } .dots i.f4, .dots i.f5 { background: var(--good); }
+  ul { margin: 6px 0 0; padding-left: 18px; } li { margin: 3px 0; font-size: 14px; }
+  .err { color: var(--bad); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Discovery Roleplay</h1>
+  <span id="agentState" class="pill">offline</span>
+</header>
+
+<main>
+  <div class="stack">
+    <section class="card">
+      <h2>Call</h2>
+      <div id="setupFields">
+        <label for="company">Company (optional)</label>
+        <input id="company" placeholder="e.g. Gong" autocomplete="off">
+        <label for="website">Website</label>
+        <input id="website" placeholder="e.g. gong.io" autocomplete="off">
+        <div id="passcodeWrap" hidden>
+          <label for="passcode">Passcode</label>
+          <input id="passcode" type="password" autocomplete="current-password">
+        </div>
+        <div class="hint">Leave company blank to say it out loud instead.</div>
+      </div>
+      <div class="row">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="stopBtn" class="danger" disabled>Stop</button>
+      </div>
+      <div class="row">
+        <button id="micBtn" disabled>Mute mic</button>
+        <button id="endBtn" disabled>End call &amp; score</button>
+      </div>
+      <div class="meter"><span id="micLabel">Mic off</span><div class="bar"><div id="micFill" class="fill"></div></div></div>
+      <div class="steps" id="steps">
+        <div data-phase="setup">Setup</div><div data-phase="researching">Research</div>
+        <div data-phase="roleplay">Call</div><div data-phase="scoring">Scoring</div><div data-phase="debrief">Debrief</div>
+      </div>
+      <div id="error" class="err"></div>
+    </section>
+
+    <section class="card">
+      <h2>Buyer</h2>
+      <div id="buyerEmpty" class="empty">Appears once the buyer joins.</div>
+      <div id="buyer" hidden>
+        <div class="buyer-name" id="buyerName"></div>
+        <div class="buyer-sub" id="buyerTitle"></div>
+        <p id="buyerSummary" style="font-size:14px;margin:10px 0"></p>
+        <h2 style="margin-top:12px">Also evaluating</h2>
+        <div class="chips" id="competitors"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="card" id="scorecard" hidden>
+      <h2>Scorecard</h2>
+      <div class="score-head"><div class="score-big" id="scoreBig"></div><div id="scoreHeadline"></div></div>
+      <div class="hint" id="talkRatio"></div>
+      <div id="cats" style="margin-top:10px"></div>
+      <h2 style="margin-top:14px">Strengths</h2><ul id="strengths"></ul>
+      <h2 style="margin-top:14px">Improve</h2><ul id="improvements"></ul>
+      <h2 style="margin-top:14px">Discovery you missed</h2><ul id="missed"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Live transcript</h2>
+      <div id="transcript"><div class="empty" id="transcriptEmpty">Press Start and allow the microphone.</div></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const { Room, RoomEvent, Track, ParticipantKind } = LivekitClient;
+const $ = (id) => document.getElementById(id);
+
+let room = null;
+let phase = "";
+let buyerName = "";
+let meterStop = null;
+const segments = new Map(); // segment id -> { el, textEl }
+
+fetch("/api/config").then(r => r.json()).then(c => { $("passcodeWrap").hidden = !c.passcodeRequired; });
+
+function agentParticipant() {
+  if (!room) return null;
+  for (const p of room.remoteParticipants.values()) if (p.kind === ParticipantKind.AGENT) return p;
+  return null;
+}
+
+function setError(msg) { $("error").textContent = msg || ""; }
+
+function setPhase(next) {
+  if (!next || next === phase) return;
+  const prev = phase;
+  phase = next;
+  const order = ["setup", "researching", "roleplay", "scoring", "debrief"];
+  const idx = order.indexOf(phase);
+  for (const el of $("steps").children) {
+    const i = order.indexOf(el.dataset.phase);
+    el.className = i === idx ? "on" : i < idx ? "done" : "";
+  }
+  $("endBtn").disabled = phase !== "roleplay";
+  if (phase === "roleplay") { addDivider(`Call with ${buyerName || "the buyer"} started`); $("scorecard").hidden = true; }
+  if (phase === "scoring" && prev === "roleplay") addDivider("Call ended");
+}
+
+function renderBuyer(raw) {
+  let b = null;
+  try { b = raw ? JSON.parse(raw) : null; } catch { b = null; }
+  $("buyer").hidden = !b; $("buyerEmpty").hidden = !!b;
+  if (!b) return;
+  buyerName = b.name || "";
+  $("buyerName").textContent = b.name || "Buyer";
+  $("buyerTitle").textContent = [b.title, b.company].filter(Boolean).join(" · ");
+  $("buyerSummary").textContent = b.summary || "";
+  $("competitors").replaceChildren(...(b.competitors?.length ? b.competitors : ["None mentioned"]).map(c => {
+    const s = document.createElement("span"); s.className = "chip"; s.textContent = c; return s;
+  }));
+}
+
+function onAgentAttributes(attrs) {
+  if ("lk.agent.state" in attrs) {
+    const st = attrs["lk.agent.state"];
+    $("agentState").textContent = st; $("agentState").classList.toggle("speaking", st === "speaking");
+  }
+  if ("app.buyer" in attrs) renderBuyer(attrs["app.buyer"]);
+  if ("app.phase" in attrs) setPhase(attrs["app.phase"]);
+}
+
+function scrollTranscript() { const t = $("transcript"); t.scrollTop = t.scrollHeight; }
+
+function addDivider(text) {
+  $("transcriptEmpty")?.remove();
+  const d = document.createElement("div"); d.className = "divider"; d.textContent = text;
+  $("transcript").append(d); scrollTranscript();
+}
+
+function upsertSegment(id, isRep, text, final) {
+  $("transcriptEmpty")?.remove();
+  let seg = segments.get(id);
+  if (!seg) {
+    const el = document.createElement("div");
+    const role = isRep ? "rep" : phase === "roleplay" ? "buyer" : "coach";
+    el.className = `msg ${role}`;
+    const who = document.createElement("div"); who.className = "who";
+    who.textContent = isRep ? "You" : role === "buyer" ? (buyerName || "Buyer") : "Coach";
+    const textEl = document.createElement("div"); textEl.className = "text";
+    el.append(who, textEl);
+    $("transcript").append(el);
+    seg = { el, textEl };
+    segments.set(id, seg);
+  }
+  seg.textEl.textContent = text;
+  seg.el.classList.toggle("interim", !final);
+  scrollTranscript();
+}
+
+function renderScorecard(card) {
+  $("scorecard").hidden = false;
+  $("scoreBig").textContent = card.overall_score;
+  $("scoreHeadline").textContent = card.headline;
+  const tr = card.talk_ratio;
+  $("talkRatio").textContent = tr ? `You talked ${Math.round(tr.rep_share * 100)}% of the time (aim for 30–45%).` : "";
+  $("cats").replaceChildren(...card.categories.map(c => {
+    const d = document.createElement("div"); d.className = "cat";
+    d.innerHTML = `<div class="name"></div><div class="val"></div><div class="dots">${[1,2,3,4,5].map(i => `<i class="${i <= c.score ? "f" + c.score : ""}"></i>`).join("")}</div><div class="detail"></div>`;
+    d.querySelector(".name").textContent = c.label || c.key;
+    d.querySelector(".val").textContent = `${c.score}/5`;
+    d.querySelector(".detail").textContent = c.coaching;
+    return d;
+  }));
+  const fill = (id, items) => $(id).replaceChildren(...items.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  fill("strengths", card.strengths); fill("improvements", card.improvements); fill("missed", card.missed_discovery);
+  $("scorecard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startMicMeter(track) {
+  const ctx = new AudioContext();
+  const src = ctx.createMediaStreamSource(new MediaStream([track.mediaStreamTrack]));
+  const analyser = ctx.createAnalyser(); analyser.fftSize = 512; src.connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  let raf;
+  const tick = () => {
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0; for (const v of buf) sum += v * v;
+    const level = Math.min(1, Math.sqrt(sum / buf.length) * 6);
+    $("micFill").style.width = `${track.isMuted ? 0 : level * 100}%`;
+    raf = requestAnimationFrame(tick);
+  };
+  tick();
+  return () => { cancelAnimationFrame(raf); ctx.close(); $("micFill").style.width = "0"; };
+}
+
+async function start() {
+  setError("");
+  $("startBtn").disabled = true;
+  try {
+    const res = await fetch("/api/token", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ company: $("company").value, website: $("website").value, passcode: $("passcode").value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Token request failed (${res.status})`);
+
+    room = new Room({ adaptiveStream: true, dynacast: true });
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === Track.Kind.Audio) document.body.appendChild(track.attach());
+    });
+    room.on(RoomEvent.ParticipantAttributesChanged, (changed, p) => { if (p.kind === ParticipantKind.AGENT) onAgentAttributes(changed); });
+    room.on(RoomEvent.ParticipantConnected, (p) => { if (p.kind === ParticipantKind.AGENT) onAgentAttributes(p.attributes); });
+    room.on(RoomEvent.Disconnected, () => stop(true));
+
+    room.registerTextStreamHandler("lk.transcription", async (reader, info) => {
+      const attrs = reader.info.attributes || {};
+      const id = attrs["lk.segment_id"] || reader.info.id;
+      const isRep = info.identity === room.localParticipant.identity;
+      // Agent speech streams deltas into one stream per segment; user transcripts send a
+      // full-text stream per update. Either way this stream's text is the segment's text.
+      let text = "";
+      for await (const chunk of reader) { text += chunk; upsertSegment(id, isRep, text, false); }
+      const final = (reader.info.attributes || {})["lk.transcription_final"] === "true";
+      upsertSegment(id, isRep, text, final || !isRep);
+    });
+    room.registerTextStreamHandler("app.scorecard", async (reader) => {
+      try { renderScorecard(JSON.parse(await reader.readAll())); } catch (e) { console.error(e); }
+    });
+
+    await room.connect(data.serverUrl, data.participantToken);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    await room.startAudio();
+    const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    if (pub?.audioTrack) meterStop = startMicMeter(pub.audioTrack);
+
+    const agent = agentParticipant(); if (agent) onAgentAttributes(agent.attributes);
+    $("setupFields").hidden = true;
+    $("stopBtn").disabled = false; $("micBtn").disabled = false;
+    $("micLabel").textContent = "Mic on"; $("agentState").textContent = "connecting";
+  } catch (e) {
+    setError(e.message || String(e));
+    await stop(true);
+  }
+}
+
+async function stop(silent) {
+  meterStop?.(); meterStop = null;
+  const r = room; room = null;
+  if (r) { r.unregisterTextStreamHandler?.("lk.transcription"); r.unregisterTextStreamHandler?.("app.scorecard"); await r.disconnect(); }
+  document.querySelectorAll("body > audio").forEach(a => a.remove());
+  $("startBtn").disabled = false; $("stopBtn").disabled = true; $("micBtn").disabled = true; $("endBtn").disabled = true;
+  $("micBtn").textContent = "Mute mic"; $("micLabel").textContent = "Mic off";
+  $("agentState").textContent = "offline"; $("agentState").classList.remove("speaking");
+  $("setupFields").hidden = false;
+  segments.clear(); phase = "";
+}
+
+$("startBtn").onclick = start;
+$("stopBtn").onclick = () => stop(false);
+$("micBtn").onclick = async () => {
+  const on = !room.localParticipant.isMicrophoneEnabled;
+  await room.localParticipant.setMicrophoneEnabled(on);
+  $("micBtn").textContent = on ? "Mute mic" : "Unmute mic";
+  $("micLabel").textContent = on ? "Mic on" : "Muted";
+};
+$("endBtn").onclick = async () => {
+  const agent = agentParticipant();
+  if (!agent) return;
+  $("endBtn").disabled = true;
+  try { await room.localParticipant.performRpc({ destinationIdentity: agent.identity, method: "end_call", payload: "" }); }
+  catch (e) { setError(`Couldn't end the call: ${e.message}`); $("endBtn").disabled = phase !== "roleplay"; }
+};
+</script>
+</body>
+</html>

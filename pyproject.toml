@@ -1,0 +1,19 @@
+[project]
+name = "ryan-simulation-agent"
+version = "0.1.0"
+description = "Voice-cloned discovery-call roleplay agent with a post-call scorecard"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "livekit-agents[anthropic,assemblyai,codecs,openai,silero]~=1.8",
+    "livekit-plugins-assemblyai-tts",
+    "anthropic",
+    "aiohttp",
+    "python-dotenv",
+    "openai>=2.54.0",
+]
+
+[tool.uv.sources]
+livekit-plugins-assemblyai-tts = { git = "https://github.com/ryanseams/assemblyai-livekit-tts", branch = "sandbox-custom-voice" }
+
+[tool.uv]
+link-mode = "copy"
