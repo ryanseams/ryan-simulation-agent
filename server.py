@@ -15,22 +15,14 @@ load_dotenv()
 
 STATIC = Path(__file__).parent / "web"
 AGENT_NAME = os.environ.get("AGENT_NAME", "ryan-simulation-agent")
-# Gate token minting on a public deploy so a stranger can't run up STT/LLM/TTS spend.
-PASSCODE = os.environ.get("APP_PASSCODE", "")
 
 
 async def index(_: web.Request) -> web.FileResponse:
     return web.FileResponse(STATIC / "index.html")
 
 
-async def config(_: web.Request) -> web.Response:
-    return web.json_response({"passcodeRequired": bool(PASSCODE)})
-
-
 async def token(request: web.Request) -> web.Response:
     body = await request.json() if request.can_read_body else {}
-    if PASSCODE and not secrets.compare_digest(str(body.get("passcode", "")), PASSCODE):
-        return web.json_response({"error": "Wrong passcode"}, status=401)
 
     company = str(body.get("company", "")).strip()[:120]
     website = str(body.get("website", "")).strip()[:200]
@@ -60,7 +52,6 @@ async def token(request: web.Request) -> web.Response:
 def make_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/", index)
-    app.router.add_get("/api/config", config)
     app.router.add_post("/api/token", token)
     app.router.add_get("/healthz", lambda _: web.Response(text="ok"))
     return app

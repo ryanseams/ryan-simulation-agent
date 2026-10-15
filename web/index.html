@@ -92,10 +92,6 @@
         <input id="company" placeholder="e.g. Gong" autocomplete="off">
         <label for="website">Website</label>
         <input id="website" placeholder="e.g. gong.io" autocomplete="off">
-        <div id="passcodeWrap" hidden>
-          <label for="passcode">Passcode</label>
-          <input id="passcode" type="password" autocomplete="current-password">
-        </div>
         <div class="hint">Leave company blank to say it out loud instead.</div>
       </div>
       <div class="row">
@@ -154,8 +150,6 @@ let phase = "";
 let buyerName = "";
 let meterStop = null;
 const segments = new Map(); // segment id -> { el, textEl }
-
-fetch("/api/config").then(r => r.json()).then(c => { $("passcodeWrap").hidden = !c.passcodeRequired; });
 
 function agentParticipant() {
   if (!room) return null;
@@ -273,7 +267,7 @@ async function start() {
   try {
     const res = await fetch("/api/token", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ company: $("company").value, website: $("website").value, passcode: $("passcode").value }),
+      body: JSON.stringify({ company: $("company").value, website: $("website").value }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Token request failed (${res.status})`);

@@ -31,5 +31,4 @@ uv run python agent.py console     # or: talk in the terminal, no browser
 | `ASSEMBLYAI_TTS_URL`, `ASSEMBLYAI_TTS_VOICE_ID`, `ASSEMBLYAI_TTS_MODEL_ID` | TTS endpoint, cloned voice, checkpoint |
 | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Live LLM and scorecard LLM |
 | `LIVE_LLM_MODEL`, `SCORECARD_LLM_MODEL` | Optional model overrides |
-| `APP_PASSCODE` | Required to start a call from the web UI (unset = open) |
 | `AGENT_NAME` | Dispatch name (default `ryan-simulation-agent`) |
