@@ -4,3 +4,4 @@ __pycache__/
 scorecards/
 # Local working copy of the TTS plugin fork (installed from GitHub instead)
 assemblyai-livekit-tts/
+.app_passcode
